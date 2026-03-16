@@ -1,0 +1,17 @@
+{
+  "name": "multi-signer-poc",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "run-workers": "tsx scripts/run-workers.ts"
+  },
+  "dependencies": {
+    "dotenv": "16.4.7",
+    "viem": "2.47.4"
+  },
+  "devDependencies": {
+    "tsx": "4.19.2",
+    "typescript": "5.7.2"
+  }
+}
