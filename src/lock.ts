@@ -39,17 +39,29 @@ export async function acquireLock(
       const nodeErr = err as NodeJS.ErrnoException;
       if (nodeErr.code !== "EEXIST") throw err;
 
-      // Check stale lock
+      // Check stale lock (empty/corrupt = crashed process, treat as stale)
       try {
         const raw = await fs.readFile(lockPath, "utf8");
         const meta = JSON.parse(raw) as { pid: number; createdAt: number };
 
-        if (Date.now() - meta.createdAt > stale) {
+        const isStaleByTime =
+          !meta.createdAt || Date.now() - meta.createdAt > stale;
+        let isStaleByPid = false;
+        if (meta.pid) {
+          try {
+            process.kill(meta.pid, 0);
+          } catch {
+            isStaleByPid = true;
+          }
+        }
+
+        if (isStaleByTime || isStaleByPid) {
           await fs.unlink(lockPath).catch(() => {});
           continue;
         }
       } catch {
-        /* ignore parse/read errors */
+        await fs.unlink(lockPath).catch(() => {});
+        continue;
       }
 
       await sleep(retryDelay);

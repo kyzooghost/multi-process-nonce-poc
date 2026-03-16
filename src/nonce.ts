@@ -57,25 +57,29 @@ export async function initNonceFromChain(
   });
 
   try {
-    try {
-      const raw = await fs.readFile(noncePath, "utf8");
-      const state = JSON.parse(raw) as NonceState;
-      if (state.nextNonce !== undefined) {
-        return;
-      }
-    } catch (err) {
-      const nodeErr = err as NodeJS.ErrnoException;
-      if (nodeErr.code !== "ENOENT") throw err;
-    }
-
     const chainNonce = await getTransactionCount(client, {
       address,
       blockTag: "pending",
     });
 
+    let fileNonce: number | undefined;
+    try {
+      const raw = await fs.readFile(noncePath, "utf8");
+      const state = JSON.parse(raw) as NonceState;
+      fileNonce = state.nextNonce;
+    } catch (err) {
+      const nodeErr = err as NodeJS.ErrnoException;
+      if (nodeErr.code !== "ENOENT") throw err;
+    }
+
+    const nextNonce =
+      fileNonce !== undefined && fileNonce > chainNonce
+        ? fileNonce
+        : chainNonce;
+
     await fs.writeFile(
       noncePath,
-      JSON.stringify({ nextNonce: chainNonce } satisfies NonceState)
+      JSON.stringify({ nextNonce } satisfies NonceState)
     );
   } finally {
     await release();
